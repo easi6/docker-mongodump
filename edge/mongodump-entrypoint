@@ -1,0 +1,52 @@
+#!/bin/bash
+# Entrypoint script to schedule the execution of the mongodump script.
+# Copyright (C) 2017 BigTrueData
+
+set -e
+
+if [ -z "$DATABASE_NAME" ]; then
+  echo "Required environment variable DATABASE_NAME not found"
+  exit
+fi
+
+trap exit SIGINT
+trap exit SIGTERM
+
+build_dump_command() {
+  local options="$MONGODUMP_OPTIONS --archive"
+
+  DUMP_COMMAND="mongodump $options --db $DATABASE_NAME"
+}
+
+build_output_command() {
+  local timestamp="\`date +%Y%m%d%H%M\`"
+  local output_file="$DATABASE_NAME-$timestamp.dump"
+  local default_output_command="cat - > /dump/$output_file"
+
+  OUTPUT_COMMAND=${OUTPUT_COMMAND:-$default_output_command}
+}
+
+build_dump_command
+build_output_command
+
+if [ -n "$TIME_ZONE" ]; then
+  export TIME_ZONE
+fi
+
+if [ -n "$TIME_SPEC" ]; then
+  export TIME_SPEC
+fi
+
+if [ -n "$CIPHER_ALGORITHM" ]; then
+  export CIPHER_ALGORITHM
+fi
+
+if [ -n "$CIPHER_PASSWORD" ]; then
+  export CIPHER_PASSWORD
+fi
+
+export DUMP_COMMAND
+
+export OUTPUT_COMMAND
+
+dump-entrypoint
